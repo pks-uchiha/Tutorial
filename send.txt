@@ -1,0 +1,146 @@
+public Dictionary<string, object> SetRelatedRecords(SetRelatedRecordsRequest options)
+        {
+            Dictionary<string, object> dsResponse = new Dictionary<string, object>();
+            using (var Scope = _context.Database.BeginTransaction())
+            {
+                try
+                {
+                    //var FixedFieldsWithValue = new List<MappingObject>();
+                    //var ChildList = new List<List<MappingObject>>();
+
+                    //var workorder = _context.WorkOrders.FirstOrDefault(x => x.WoGuId == options.WoGuId);
+                    //if (workorder == null)
+                    //{
+                    //    dsResponse.Add("Table", new SetResponceMessage { Result = 0, Message = $"Workorder not found for {options.WoGuId}" });
+                    //    return dsResponse;
+                    //}
+                    //var mainWoDynamicResponse = (from w in _context.IntegrationFields
+                    //                                join t in _context.IntegrationTemplates on w.TemplateId equals t.TemplateId
+                    //                                join r in _context.WoResponseValues on w.CollectionId equals r.CollectionId
+                    //                                where t.SMWTemplateId == workorder.WorkOrderTypeId && r.WoGuId == options.WoGuId && (w.ExternalFieldKey.ToLower() == "siteid"
+                    //                            || w.ExternalFieldKey.ToLower() == "orgid")
+                    //                                select new
+                    //                                {
+                    //                                    ExternalFieldKey = w.ExternalFieldKey,
+                    //                                    Value = r.ResponseValue
+                    //                                });
+
+
+                    //FixedFieldsWithValue.Add(new MappingObject { Attr = "wonum", Value = workorder.ExternalId });
+                    //foreach (var item in mainWoDynamicResponse)
+                    //{
+                    //    FixedFieldsWithValue.Add(new MappingObject { Attr = item.ExternalFieldKey.ToLower(), Value = item.Value });
+                    //}
+
+                    if (options.RelationType == "WO")
+                    {
+                        var relatedWoNums = options.RWoNums.Split(',');
+
+
+                        foreach (var relatedids in relatedWoNums)
+                        {
+                            var ChildValues = new List<MappingObject>();
+                            var relatedWoNum = relatedids;
+
+                            //ChildValues.Add(new MappingObject { Attr = "relatedrecwonum", Value = relatedWoNum });
+
+                            //foreach (var item in mainWoDynamicResponse)
+                            //{
+                            //    ChildValues.Add(new MappingObject { Attr = item.ExternalFieldKey.ToLower(), Value = item.Value });
+                            //}
+
+                            //ChildList.Add(ChildValues);
+
+                            MaximoRelatedRecord mxr = new MaximoRelatedRecord
+                            {
+                                LastUpdated = DateTime.UtcNow,
+                                RelationType = options.RelationType,
+                                RWoNum = relatedWoNum,
+                                WoSrNum = options.WoSrNum
+
+                            };
+                            _context.MaximoRelatedRecords.Add(mxr);
+                        }
+
+                        //FixedFieldsWithValue.Add(new MappingObject { Attr = "relatedrecord", Value = ChildList });
+                    }
+                    else if (options.RelationType == "SR")
+                    {
+                        var relatedSRIds = options.RSrNums.Split(',');
+                        foreach (var relatedids in relatedSRIds)
+                        {
+                            var ChildValues = new List<MappingObject>();
+                            var relatedId = relatedids;
+
+
+                            //ChildValues.Add(new MappingObject { Attr = "relatedrecclass", Value = "SR" });
+                            //ChildValues.Add(new MappingObject { Attr = "relatedreckey", Value = relatedId });
+                            //ChildValues.Add(new MappingObject { Attr = "siteid", Value = mainWoDynamicResponse.FirstOrDefault(x => x.ExternalFieldKey.ToLower() == "siteid").Value });
+
+
+
+                            //ChildList.Add(ChildValues);
+
+                            MaximoRelatedRecord mxr = new MaximoRelatedRecord
+                            {
+                                LastUpdated = DateTime.UtcNow,
+                                RelationType = options.RelationType,
+                                RSrNum = relatedId,
+                                WoSrNum = options.WoSrNum
+                            };
+                            _context.MaximoRelatedRecords.Add(mxr);
+                        }
+
+                        //FixedFieldsWithValue.Add(new MappingObject { Attr = "relatedrecord", Value = ChildList });
+                    }
+
+                    else if (options.RelationType == "SR-SR")
+                    {
+                        var relatedSRIds = options.RSrNums.Split(',');
+                        foreach (var relatedids in relatedSRIds)
+                        {
+
+                            var relatedId = relatedids;
+                            MaximoRelatedRecord mxr = new MaximoRelatedRecord
+                            {
+                                LastUpdated = DateTime.UtcNow,
+                                RelationType = options.RelationType,
+                                RSrNum = relatedId,
+                                WoSrNum = options.WoSrNum
+                            };
+                            _context.MaximoRelatedRecords.Add(mxr);
+                        }
+                    }
+
+
+                    //if (FixedFieldsWithValue.Count > 0)
+                    //{
+                    //    var FieldsMapping = JsonConvert.SerializeObject(FixedFieldsWithValue);
+                    //    var res = Maximo.WebPostRequest("MaximoJson/SetMaximoRelatedRecords", options.WoGuId.ToString(), FieldsMapping);
+                    //    if (!string.IsNullOrEmpty(res))
+                    //    {
+                    //        Log.FileLogger($"SetRelatedRecords||Related Records successfully updated in Maximo {LineSeparator}", LoggingType.Info);
+                    //    }
+                    //    else
+                    //    {
+                    //        Log.FileLogger($"SetRelatedRecords||Related Records not updated in Maximo. Please check adaptor logs. {LineSeparator}", LoggingType.Info);
+
+                    //    }
+                    //}
+                    
+                    _context.SaveChanges();
+                    Scope.Commit();
+                    Log.FileLogger($"SetRelatedRecords||Related Records updated successfully {LineSeparator}", LoggingType.Info);
+
+                    dsResponse.Add("Table", new SetResponceMessage { Result = 1, Message = "Data saved successfully" });
+                }
+                catch (Exception ex)
+                {
+                    Scope.Rollback();
+                    dsResponse.Add("Table", new SetResponceMessage { Result = 0, Message = "There is some error, try again" });
+                    Scope.Dispose();
+                    Log.FileLogger(ex.Message, LoggingType.Error);
+                }
+            }
+            return dsResponse;
+        }
